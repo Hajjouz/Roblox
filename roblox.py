@@ -110,6 +110,13 @@ class RobloxUsernameChecker:
         
         total = len(usernames)
         
+        # Calculate estimated time
+        estimated_time = total * delay
+        print(f"\n⏱️  Estimated time: {estimated_time:.1f}s (~{estimated_time/60:.1f} min)")
+        print(f"⏳ Delay between checks: {delay}s")
+        
+        start_time = time.time()
+        
         for idx, username in enumerate(usernames, 1):
             print(f"\n[{idx}/{total}] Checking: {username}")
             
@@ -136,9 +143,15 @@ class RobloxUsernameChecker:
                     })
                     print(f"  ⚠️  Invalid - {message}")
             
-            # Rate limiting
+            # Rate limiting with progress
             if idx < total:
+                remaining = total - idx
+                time_left = remaining * delay
+                print(f"  ⏳ Waiting {delay}s... ({remaining} remaining, ~{time_left:.0f}s left)")
                 time.sleep(delay)
+        
+        elapsed_time = time.time() - start_time
+        print(f"\n⏱️  Total time: {elapsed_time:.1f}s ({elapsed_time/60:.1f} min)")
         
         return results
 
@@ -173,6 +186,49 @@ def print_results_summary(results: dict):
         print(f"   - {item['username']}: {item['reason']}")
     
     print("\n" + "="*50)
+
+
+def get_speed_setting() -> float:
+    """
+    Get speed setting from user
+    
+    Returns:
+        Delay in seconds
+    """
+    print("\n⚡ SPEED SETTINGS:")
+    print("=" * 50)
+    print("1. 🐌 Slow (2.0s delay) - Safest, no risk of rate limit")
+    print("2. 🚶 Normal (1.0s delay) - Recommended, balanced")
+    print("3. 🏃 Fast (0.5s delay) - Quick but some rate limit risk")
+    print("4. ⚡ Turbo (0.3s delay) - Fastest, high rate limit risk")
+    print("5. 🎯 Custom - Set your own delay")
+    print("=" * 50)
+    print("\n💡 Tip: Use Slow/Normal for large lists to avoid API blocking")
+    
+    speed_choice = input("\nSelect speed (1-5): ").strip()
+    
+    speed_map = {
+        '1': 2.0,   # Slow
+        '2': 1.0,   # Normal
+        '3': 0.5,   # Fast
+        '4': 0.3    # Turbo
+    }
+    
+    if speed_choice == '5':
+        try:
+            custom_delay = float(input("Enter delay in seconds (0.1-10.0): "))
+            delay = max(0.1, min(custom_delay, 10.0))
+            print(f"✅ Custom delay set: {delay}s")
+            return delay
+        except ValueError:
+            print("⚠️  Invalid input, using Normal speed (1.0s)")
+            return 1.0
+    
+    delay = speed_map.get(speed_choice, 1.0)
+    speed_names = {2.0: "Slow", 1.0: "Normal", 0.5: "Fast", 0.3: "Turbo"}
+    print(f"✅ Speed selected: {speed_names.get(delay, 'Normal')} ({delay}s delay)")
+    
+    return delay
 
 
 def main():
@@ -228,10 +284,13 @@ def main():
         
         usernames = [u.strip() for u in usernames_input.split(',') if u.strip()]
         
+        # Get speed setting
+        delay = get_speed_setting()
+        
         print(f"\n🔍 Checking {len(usernames)} usernames...")
         print("-" * 50)
         
-        results = checker.check_bulk(usernames)
+        results = checker.check_bulk(usernames, delay=delay)
         print_results_summary(results)
     
     elif choice == "3":
@@ -246,10 +305,13 @@ def main():
                 print("❌ No usernames found in file!")
                 sys.exit(1)
             
+            # Get speed setting
+            delay = get_speed_setting()
+            
             print(f"\n🔍 Checking {len(usernames)} usernames from file...")
             print("-" * 50)
             
-            results = checker.check_bulk(usernames)
+            results = checker.check_bulk(usernames, delay=delay)
             print_results_summary(results)
             
             # Save results
